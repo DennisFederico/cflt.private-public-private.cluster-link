@@ -1,0 +1,51 @@
+#cloud-config
+package_update: true
+package_upgrade: true
+packages:
+  - nginx
+
+write_files:
+  - path: /etc/nginx/nginx.conf
+    content: |
+      load_module /usr/lib/nginx/modules/ngx_stream_module.so;
+      events {}
+      stream {
+        map $ssl_preread_server_name $targetBackend {
+          default $ssl_preread_server_name;
+      }
+
+      server {
+        listen 9092;
+
+        proxy_connect_timeout 1s;
+        proxy_timeout 7200s;
+
+        resolver 168.63.129.16;
+
+        proxy_pass $targetBackend:9092;
+        ssl_preread on;
+      }
+
+      server {
+        listen 443;
+
+        proxy_connect_timeout 1s;
+        proxy_timeout 7200s;
+
+        resolver 168.63.129.16;
+
+        proxy_pass $targetBackend:443;
+        ssl_preread on;
+      }
+
+      log_format stream_routing '[$time_local] remote address $remote_addr'
+                          'with SNI name "$ssl_preread_server_name" '
+                          'proxied to "$upstream_addr" '
+                          '$protocol $status $bytes_sent $bytes_received '
+                          '$session_time';
+      access_log /var/log/nginx/stream-access.log stream_routing;
+      }
+    permissions: "0644"
+
+runcmd:
+  - systemctl restart nginx
