@@ -1,5 +1,17 @@
 # Cluster Link with Public Jump Cluster
 
+***IMPORTANT***
+API Keys creation is driven by the `create_private_cluster_api_keys` variable, with `false` default value.
+Run with `-var="create_private_cluster_api_keys=true"` if you are already on a network that can resolve the Clusters DNS when created and connectivity to reach them.
+
+Options to run this locally include updating `/etc/hosts` file or openning a pipe connection to the NGINX proxy, perhaps using `proxychains4`
+
+```shell
+ssh -D 9050 -C -i ~/.ssh/[private.pem] ccproxyadmin@[proxy_ip]
+```
+
+---
+
 This pattern applies to AZURE and GCP Cross-Region replication between two private cluster on different cloud regions.
 See. [Private-Public-Private](https://docs.confluent.io/cloud/current/multi-cloud/cluster-linking/private-networking.html#private-public-private-pattern-with-cluster-link-chaining-and-a-jump-cluster)
 
