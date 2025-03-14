@@ -1,13 +1,38 @@
-output "primary_cluster" {
-    value = "${module.primary_cluster.resources}"
-}
+output "summary" {
+    value = <<-EOT
+    -----
+    Confluent Cloud Environment: ${confluent_environment.main.display_name} (${confluent_environment.main.id})
+    
+    -----
 
-output "jump_cluster" {
-    value = "${module.jump_cluster.resources}"
-}
+    Jump Public Cluster: "${module.jump_cluster.cluster.display_name}" (${module.jump_cluster.cluster.id})
+    Bootstrap: ${module.jump_cluster.cluster.bootstrap_endpoint}
+    Endpoint: ${module.jump_cluster.cluster.rest_endpoint}
+    
+    Cluster Owner: ${module.jump_cluster.owner.display_name} (${module.jump_cluster.owner.id})
+    API-KEY: ${module.jump_cluster.api_key.id} : ${nonsensitive(module.jump_cluster.api_key.secret)}
 
-output "dr_cluster" {
-    value = "${module.dr_cluster.resources}"
+    -----
+
+    Primary Private Cluster: "${module.primary_cluster.kafka_cluster.display_name}" (${module.primary_cluster.kafka_cluster.id})
+    Bootstrap: ${module.primary_cluster.kafka_cluster.bootstrap_endpoint}
+    Endpoint: ${module.primary_cluster.kafka_cluster.rest_endpoint}
+
+    Cluster Owner: ${module.primary_apikey.cluster_owner.display_name} (${module.primary_apikey.cluster_owner.id})
+    API-KEY: ${module.primary_apikey.api_key.id} : ${nonsensitive(module.primary_apikey.api_key.secret)}
+
+    -----
+
+    DR Private Cluster: "${module.dr_cluster.kafka_cluster.display_name}" (${module.dr_cluster.kafka_cluster.id})
+    Bootstrap: ${module.dr_cluster.kafka_cluster.bootstrap_endpoint}
+    Endpoint: ${module.dr_cluster.kafka_cluster.rest_endpoint}
+
+    Cluster Owner: ${module.dr_apikey.cluster_owner.display_name} (${module.dr_apikey.cluster_owner.id})
+    API-KEY: ${module.dr_apikey.api_key.id} : ${nonsensitive(module.dr_apikey.api_key.secret)}
+    -----
+    EOT
+
+    sensitive = false
 }
 
 output "proxy_data" {
@@ -20,10 +45,30 @@ output "proxy_data" {
     sensitive = false
 }
 
-output "primary_cluster_access_data" {
-    value = module.primary_apikey.access_data
-}
+output "exports" {
+    value = <<-EOT
+    -----
+    export CFLT_ENVIRONMENT_ID="${confluent_environment.main.id}"
+    
+    export JUMP_CLUSTER_ID="${module.jump_cluster.cluster.id}"
+    export JUMP_CLUSTER_BOOTSTRAP="${module.jump_cluster.cluster.bootstrap_endpoint}"
+    export JUMP_CLUSTER_REST="${module.jump_cluster.cluster.rest_endpoint}"
+    export JUMP_API_KEY="${module.jump_cluster.api_key.id}"
+    export JUMP_API_SECRET="${nonsensitive(module.jump_cluster.api_key.secret)}"
 
-output "dr_cluster_access_data" {
-    value = module.primary_apikey.access_data
+    export PRIMARY_CLUSTER_ID="${module.primary_cluster.kafka_cluster.id}"
+    export PRIMARY_CLUSTER_BOOTSTRAP="${module.primary_cluster.kafka_cluster.bootstrap_endpoint}"
+    export PRIMARY_CLUSTER_REST="${module.primary_cluster.kafka_cluster.rest_endpoint}"
+    export PRIMARY_API_KEY="${module.primary_apikey.api_key.id}"
+    export PRIMARY_API_SECRET="${nonsensitive(module.primary_apikey.api_key.secret)}"
+
+    export DR_CLUSTER_ID="${module.dr_cluster.kafka_cluster.id}"
+    export DR_CLUSTER_BOOTSTRAP="${module.dr_cluster.kafka_cluster.bootstrap_endpoint}"
+    export DR_CLUSTER_REST="${module.dr_cluster.kafka_cluster.rest_endpoint}"
+    export DR_API_KEY="${module.dr_apikey.api_key.id}"
+    export DR_API_SECRET="${nonsensitive(module.dr_apikey.api_key.secret)}"
+    -----
+    EOT
+
+    sensitive = false
 }

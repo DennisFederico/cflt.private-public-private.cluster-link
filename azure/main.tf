@@ -47,12 +47,27 @@ locals {
     "2" = "default",
     "3" = "default",
   }
-  proxy_allowed_cidrs = ["170.253.61.156/32"]
+  proxy_allowed_cidrs = ["170.253.50.253/32"]
 }
-
 resource "confluent_environment" "main" {
   display_name = "Private-Public-Private"
+  stream_governance {
+         package = "ESSENTIALS"   # Use "ESSENTIALS" or "ADVANCED"
+     }
 }
+
+resource "confluent_kafka_cluster" "temp" {
+     display_name = "temporary-kafka-cluster"
+     availability = "SINGLE_ZONE"
+     cloud        = "AZURE"
+     region       = "${var.primary_region}"
+     basic {}
+
+     environment {
+         id = confluent_environment.main.id
+     }
+ }
+
 
 module "jump_cluster" {
   source = "./modules/azure-public"
