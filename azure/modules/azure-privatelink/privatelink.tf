@@ -3,15 +3,6 @@ locals {
   network_id = split(".", local.dns_domain)[0]
 }
 
-# data "azurerm_resource_group" "rg" {
-#   name = var.resource_group
-# }
-
-# data "azurerm_virtual_network" "vnet" {
-#   name                = var.vnet_name
-#   resource_group_name = data.azurerm_resource_group.rg.name
-# }
-
 resource "azurerm_resource_group" "rg" {
   name     = var.resource_group
   location = var.vnet_region

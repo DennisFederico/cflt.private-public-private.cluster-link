@@ -11,6 +11,8 @@ resource "confluent_role_binding" "kafka_cluser_owner_rb" {
 }
 
 resource "confluent_api_key" "cluster_owner_api_key" {
+  count = var.create_api_keys ? 1 : 0
+
   display_name = "${confluent_service_account.cluster_owner.display_name}_API_KEY"
   description  = "Kafka API Key that is owned by '${confluent_service_account.cluster_owner.display_name}' service account"
 

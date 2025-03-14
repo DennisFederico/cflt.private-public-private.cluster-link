@@ -1,5 +1,6 @@
 output "summary" {
     value = <<-EOT
+
     -----
     Confluent Cloud Environment: ${confluent_environment.main.display_name} (${confluent_environment.main.id})
     
@@ -19,7 +20,7 @@ output "summary" {
     Endpoint: ${module.primary_cluster.kafka_cluster.rest_endpoint}
 
     Cluster Owner: ${module.primary_apikey.cluster_owner.display_name} (${module.primary_apikey.cluster_owner.id})
-    API-KEY: ${module.primary_apikey.api_key.id} : ${nonsensitive(module.primary_apikey.api_key.secret)}
+    API-KEY: "${var.create_private_cluster_api_keys ? "${module.primary_apikey.api_key[0].id} ${nonsensitive(module.primary_apikey.api_key[0].secret)}" : "To create API KEYS for Private Clusters, run TF using -var=\"create_private_cluster_api_keys=true\"."}"
 
     -----
 
@@ -28,7 +29,7 @@ output "summary" {
     Endpoint: ${module.dr_cluster.kafka_cluster.rest_endpoint}
 
     Cluster Owner: ${module.dr_apikey.cluster_owner.display_name} (${module.dr_apikey.cluster_owner.id})
-    API-KEY: ${module.dr_apikey.api_key.id} : ${nonsensitive(module.dr_apikey.api_key.secret)}
+    API-KEY: "${var.create_private_cluster_api_keys ? "${module.dr_apikey.api_key[0].id} ${nonsensitive(module.dr_apikey.api_key[0].secret)}" : "To create API KEYS for Private Clusters, run TF using -var=\"create_private_cluster_api_keys=true\"."}"
     -----
     EOT
 
@@ -47,6 +48,8 @@ output "proxy_data" {
 
 output "exports" {
     value = <<-EOT
+    
+    ${var.create_private_cluster_api_keys ? "" : "IMPORTANT: To create API KEYS for Private Clusters, run TF using -var=\"create_private_cluster_api_keys=true\"."}
     -----
     export CFLT_ENVIRONMENT_ID="${confluent_environment.main.id}"
     
@@ -59,14 +62,15 @@ output "exports" {
     export PRIMARY_CLUSTER_ID="${module.primary_cluster.kafka_cluster.id}"
     export PRIMARY_CLUSTER_BOOTSTRAP="${module.primary_cluster.kafka_cluster.bootstrap_endpoint}"
     export PRIMARY_CLUSTER_REST="${module.primary_cluster.kafka_cluster.rest_endpoint}"
-    export PRIMARY_API_KEY="${module.primary_apikey.api_key.id}"
-    export PRIMARY_API_SECRET="${nonsensitive(module.primary_apikey.api_key.secret)}"
+    export PRIMARY_API_KEY="${var.create_private_cluster_api_keys ? module.primary_apikey.api_key[0].id : ""}"
+    export PRIMARY_API_SECRET="${var.create_private_cluster_api_keys ? nonsensitive(module.primary_apikey.api_key[0].secret) : ""}"
 
     export DR_CLUSTER_ID="${module.dr_cluster.kafka_cluster.id}"
     export DR_CLUSTER_BOOTSTRAP="${module.dr_cluster.kafka_cluster.bootstrap_endpoint}"
     export DR_CLUSTER_REST="${module.dr_cluster.kafka_cluster.rest_endpoint}"
-    export DR_API_KEY="${module.dr_apikey.api_key.id}"
-    export DR_API_SECRET="${nonsensitive(module.dr_apikey.api_key.secret)}"
+    export DR_API_KEY="${var.create_private_cluster_api_keys ? module.dr_apikey.api_key[0].id : ""}"
+    export DR_API_SECRET="${var.create_private_cluster_api_keys ? nonsensitive(module.dr_apikey.api_key[0].secret) : ""}"
+
     -----
     EOT
 

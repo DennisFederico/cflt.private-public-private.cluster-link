@@ -29,25 +29,18 @@ provider "azurerm" {
 }
 
 locals {
-  public_jump_cluster_name = "public-jump-cluster"
-  private_primary_cluster_name = "private-primary-cluster"
-  private_dr_cluster_name = "private-dr-cluster"
-  azure_hub_resource_group_name = "${var.azure_resource_group_prefix}"
-  azure_hub_vnet_name = "${var.azure_resource_group_prefix}-vnet"
-  azure_primary_resource_group_name = "${var.azure_resource_group_prefix}-${var.primary_region}"
-  azure_dr_resource_group_name = "${var.azure_resource_group_prefix}-${var.dr_region}"
-  azure_primary_vnet = "${var.azure_resource_group_prefix}-primary-vnet"
-  azure_primary_vnet_cidr = "20.1.0.0/16"
-  azure_primary_default_subnet_cidr = "20.1.1.0/24"
-  azure_dr_vnet = "${var.azure_resource_group_prefix}-dr-vnet"
-  azure_dr_vnet_cidr = "30.1.0.0/16"
-  azure_dr_default_subnet_cidr = "30.1.1.0/24"
+  azure_hub_resource_group_name = "${var.azure_hub_resource_name}"
+  azure_hub_vnet_name = "${var.azure_hub_resource_name}-vnet"
+  azure_primary_resource_group_name = "${var.azure_hub_resource_name}-${var.primary_region}"
+  azure_dr_resource_group_name = "${var.azure_hub_resource_name}-${var.dr_region}"
+  azure_primary_vnet = "${var.azure_hub_resource_name}-primary-vnet"
+  azure_dr_vnet = "${var.azure_hub_resource_name}-dr-vnet"
+
   azure_subnet_name_by_zone = {
     "1" = "default",
     "2" = "default",
     "3" = "default",
-  }
-  proxy_allowed_cidrs = ["170.253.50.253/32"]
+  }  
 }
 resource "confluent_environment" "main" {
   display_name = "Private-Public-Private"
@@ -56,24 +49,11 @@ resource "confluent_environment" "main" {
      }
 }
 
-resource "confluent_kafka_cluster" "temp" {
-     display_name = "temporary-kafka-cluster"
-     availability = "SINGLE_ZONE"
-     cloud        = "AZURE"
-     region       = "${var.primary_region}"
-     basic {}
-
-     environment {
-         id = confluent_environment.main.id
-     }
- }
-
-
 module "jump_cluster" {
   source = "./modules/azure-public"
 
   cflt_environment = confluent_environment.main
-  kafka_cluster_name = local.public_jump_cluster_name
+  kafka_cluster_name = var.public_jump_cluster_name
   kafka_cluster_type = "DEDICATED"
   dedicated_cku = 1
   cc_provider = "AZURE"
@@ -85,13 +65,13 @@ module "primary_cluster" {
   azure_subscription_id = var.azure_subscription_id
   resource_group = local.azure_primary_resource_group_name
   vnet_name = local.azure_primary_vnet
-  vnet_cidr = local.azure_primary_vnet_cidr
-  default_subnet_cidr = local.azure_primary_default_subnet_cidr
+  vnet_cidr = var.azure_primary_vnet_cidr
+  default_subnet_cidr = var.azure_primary_default_subnet_cidr
   subnet_name_by_zone = local.azure_subnet_name_by_zone
   cc_provider = "AZURE"
   cc_provider_region = var.primary_region
   cflt_environment = confluent_environment.main
-  kafka_cluster_name = local.private_primary_cluster_name
+  kafka_cluster_name = var.private_primary_cluster_name
   kafka_cluster_type = "DEDICATED"
   dedicated_cku = 1
 }
@@ -101,13 +81,13 @@ module "dr_cluster" {
   azure_subscription_id = var.azure_subscription_id
   resource_group = local.azure_dr_resource_group_name
   vnet_name = local.azure_dr_vnet
-  vnet_cidr = local.azure_dr_vnet_cidr
-  default_subnet_cidr = local.azure_dr_default_subnet_cidr
+  vnet_cidr = var.azure_dr_vnet_cidr
+  default_subnet_cidr = var.azure_dr_default_subnet_cidr
   subnet_name_by_zone = local.azure_subnet_name_by_zone
   cc_provider = "AZURE"
   cc_provider_region = var.dr_region
   cflt_environment = confluent_environment.main
-  kafka_cluster_name = local.private_dr_cluster_name
+  kafka_cluster_name = var.private_dr_cluster_name
   kafka_cluster_type = "DEDICATED"
   dedicated_cku = 1
 }
@@ -116,26 +96,29 @@ module "peering" {
   source = "./modules/azure-peering"
 
   hub_resource_group_name = local.azure_hub_resource_group_name
-  primary_resource_group_name = local.azure_primary_resource_group_name
-  dr_resource_group_name = local.azure_dr_resource_group_name
+  primary_resource_group_name = module.primary_cluster.resource_group.name
+  dr_resource_group_name = module.dr_cluster.resource_group.name
   hub_vnet_name = local.azure_hub_vnet_name
   primary_vnet_name = local.azure_primary_vnet
   dr_vnet_name = local.azure_dr_vnet
   primary_private_dns_domain = module.primary_cluster.dns-domain
   dr_private_dns_domain = module.dr_cluster.dns-domain
+
+  depends_on = [ module.primary_cluster, module.dr_cluster ]
+
 }
 
 module "cc_proxy" {
   source = "./modules/azure-proxy"
   resource_group_name = local.azure_hub_resource_group_name
   vnet_name = local.azure_hub_vnet_name
-  allowed_cidrs = local.proxy_allowed_cidrs
+  allowed_cidrs = var.proxy_allowed_cidrs
 }
 
 ###### NOTE: RUN THIS TWO MODULES AFTER THE PROXY HAS BEEN CREATED AND ADDED THE DNS OF THE PRIVATE CLUSTERS ADDED TO THE /etc/hosts
 ### EVEN WHEN THE API KEY IS CREATED VIA THE CONTROL PLANE, THE "TEST" PERFORMED WILL FAIL IF THERES NO CONNECTIVITY TO THE DATA PLANE
 ### EXAMPLE FOR BROKERS... GIVE THE DNS: lkc-9qrmxm.domdpomv0qw.germanywestcentral.azure.confluent.cloud
-### HOSTS FILE: (For a SINGLE_ZONE Cluster)
+### HOSTS FILE: (For a SINGLE_ZONE Cluster) - az might vary
 ### <proxy-ip> lkc-9qrmxm.domdpomv0qw.germanywestcentral.azure.confluent.cloud
 ### <proxy-ip> lkc-9qrmxm-g000.az1.domdpomv0qw.germanywestcentral.azure.confluent.cloud
 ### <proxy-ip> lkc-9qrmxm-g001.az1.domdpomv0qw.germanywestcentral.azure.confluent.cloud
@@ -145,10 +128,12 @@ module "primary_apikey" {
   source = "./modules/private-api-key"
   cflt_environment = confluent_environment.main
   kafka_cluster = module.primary_cluster.kafka_cluster
+  create_api_keys = var.create_private_cluster_api_keys
 }
 
 module "dr_apikey" {
   source = "./modules/private-api-key"
   cflt_environment = confluent_environment.main
   kafka_cluster = module.dr_cluster.kafka_cluster
+  create_api_keys = var.create_private_cluster_api_keys
 }

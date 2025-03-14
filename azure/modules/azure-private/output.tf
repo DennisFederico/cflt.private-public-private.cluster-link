@@ -18,3 +18,7 @@ output "dns-domain" {
 output "kafka_cluster" {
     value = confluent_kafka_cluster.kafka_cluster
 }
+
+output "resource_group" {
+    value = module.privatelink.resource_group
+}

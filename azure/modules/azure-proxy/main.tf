@@ -103,6 +103,20 @@ resource "azurerm_network_security_rule" "allow_cc_proxy_kafka" {
   destination_address_prefix  = "*"
 }
 
+resource "azurerm_network_security_rule" "allow_ssh_proxy_kafka" {
+  network_security_group_name = azurerm_network_security_group.cc_proxy_vm_nsg.name
+  resource_group_name         = data.azurerm_resource_group.resource_group.name
+  name                        = "allow-ssh_proxy-kafka"
+  priority                    = 1002
+  direction                   = "Inbound"
+  access                      = "Allow"
+  protocol                    = "Tcp"
+  source_port_range           = "*"
+  destination_port_range      = "22"
+  source_address_prefixes     = var.allowed_cidrs
+  destination_address_prefix  = "*"
+}
+
 
 resource "azurerm_network_interface_security_group_association" "cc_proxy_vm_nic_nsg" {
   network_interface_id      = azurerm_network_interface.cc_proxy_vm_nic.id

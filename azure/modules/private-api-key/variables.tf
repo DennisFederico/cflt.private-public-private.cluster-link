@@ -6,3 +6,8 @@ variable cflt_environment {
 variable "kafka_cluster" {
     type        = any
 }
+
+variable "create_api_keys" {
+    type        = bool
+    default     = false
+}
